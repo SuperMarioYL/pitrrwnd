@@ -1,0 +1,27 @@
+# Go build output
+/bin/
+
+# Local pitr workspace state (never commit a workspace's .pitr/)
+/.pitr/
+.pitr/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# editor / IDE
+.idea/
+.vscode/
+*.swp
+
+# build scratch and local control files
+PUBLISH_BLOCKED.md
+BUILD_SETUP_NEXT_STEPS.md
+.spawn.*
+.builder_*
+.build_metadata*
+.stage_*
+
+# agent scratch
+.claude/
+CLAUDE.md
