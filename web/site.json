@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "name": "pitrrwnd",
+  "github": "https://github.com/SuperMarioYL/pitrrwnd",
+  "host": "pitrrwnd.lei6393.com",
+  "lang": { "primary": "zh", "toggle": true },
+  "accent": ["#0d9488"],
+  "hero": {
+    "eyebrow": { "zh": "本地 · 无账号 · 单二进制", "en": "Local · No account · Single binary" },
+    "headline": {
+      "zh": "agent 改坏了文件？\n一条命令退回任意一步",
+      "en": "Agent broke your files?\nRewind to any step in one command"
+    },
+    "sub": {
+      "zh": "把数据库时间点恢复搬到文件系统：每步一个快照、sha256 字节级校验、全程本地留审计痕。",
+      "en": "Database point-in-time recovery, mapped to the filesystem: a snapshot per step, sha256 byte-level verify, fully local with an audit trail."
+    },
+    "command": "pitr rewind --step 1 && pitr verify --step 1"
+  },
+  "advantages": [
+    {
+      "title": { "zh": "切错了？一条命令退回", "en": "Wrong step? Rewind in one command" },
+      "body": {
+        "zh": "agent 凌晨跑坏了一条命令，改坏了 git 跟踪范围之外的配置——`pitr rewind --step N` 秒级把工作集倒回那条命令之前。",
+        "en": "Agent ran a bad command at 3am and corrupted files beyond git's reach — `pitr rewind --step N` restores the workspace to before that step in seconds."
+      },
+      "chips": ["› 秒级倒回", "› 按步骤粒度", "› 不是整盘快照"]
+    },
+    {
+      "title": { "zh": "字节级校验才放心", "en": "Byte-level verify you can trust" },
+      "body": {
+        "zh": "`pitr verify --step N` 仅在工作集 sha256 全匹配时退出 0——不是启发式猜测，是真正的哈希校验。",
+        "en": "`pitr verify --step N` exits 0 only when the working set sha256 matches — not a heuristic guess, a real hash check."
+      },
+      "chips": ["› sha256 全匹配", "› 退出码 0 = 一致", "› 非 guess"]
+    },
+    {
+      "title": { "zh": "够到 git 够不到的", "en": "Reaches where git can't" },
+      "body": {
+        "zh": "/etc、~/.config、sqlite、运行时态——git 跟踪不到的文件，pitrrwnd 按步骤做快照，按步骤回滚。",
+        "en": "/etc, ~/.config, sqlite, runtime state — files git can't track, pitrrwnd snapshots per step and rewinds per step."
+      },
+      "chips": ["› 非跟踪文件", "› 按步骤非整盘", "› 配置 + DB + 运行时"]
+    },
+    {
+      "title": { "zh": "全程不出境", "en": "Never leaves your machine" },
+      "body": {
+        "zh": "气隙 box 上跑，不联网、不注册、不上云——redo 日志天然留等保可审计的还原痕。",
+        "en": "Runs on airgapped boxes — no network, no signup, no cloud — the redo log leaves a compliance-auditable restore trail."
+      },
+      "chips": ["› 气隙可用", "› 等保审计痕", "› 零外发"]
+    }
+  ],
+  "scene": { "kind": "orbit", "nodes": ["workspace", "savepoint", "rewind", "verify", "audit"] },
+  "footer": { "tag": { "zh": "MIT 开源 · 信创气隙 box 优先", "en": "MIT open source · built for airgapped compliance boxes" } }
+}
