@@ -1,56 +1,215 @@
 {
-  "schema": 1,
+  "schema": 3,
   "name": "pitrrwnd",
   "github": "https://github.com/SuperMarioYL/pitrrwnd",
   "host": "pitrrwnd.lei6393.com",
-  "lang": { "primary": "zh", "toggle": true },
-  "accent": ["#0d9488"],
+  "palette": "auto",
+  "lang": {
+    "primary": "en",
+    "toggle": true
+  },
+  "meta": {
+    "visual_style": "neon-particle",
+    "demo_source": "docs/demo-results.json"
+  },
   "hero": {
-    "eyebrow": { "zh": "本地 · 无账号 · 单二进制", "en": "Local · No account · Single binary" },
     "headline": {
-      "zh": "agent 改坏了文件？\n一条命令退回任意一步",
-      "en": "Agent broke your files?\nRewind to any step in one command"
+      "en": "Restore a workspace to an explicit savepoint.",
+      "zh": "把工作区恢复到明确的保存点。"
     },
     "sub": {
-      "zh": "把数据库时间点恢复搬到文件系统：每步一个快照、sha256 字节级校验、全程本地留审计痕。",
-      "en": "Database point-in-time recovery, mapped to the filesystem: a snapshot per step, sha256 byte-level verify, fully local with an audit trail."
+      "en": "pitrrwnd provides the pitr CLI for snapshotting a directory of regular files, restoring a selected step and verifying the restored bytes against its manifest.",
+      "zh": "pitrrwnd 提供 pitr CLI，为包含普通文件的目录创建快照，恢复选定步骤，再按清单核验恢复字节。"
     },
-    "command": "pitr rewind --step 1 && pitr verify --step 1"
+    "href": "#quickstart"
   },
   "advantages": [
     {
-      "title": { "zh": "切错了？一条命令退回", "en": "Wrong step? Rewind in one command" },
-      "body": {
-        "zh": "agent 凌晨跑坏了一条命令，改坏了 git 跟踪范围之外的配置——`pitr rewind --step N` 秒级把工作集倒回那条命令之前。",
-        "en": "Agent ran a bad command at 3am and corrupted files beyond git's reach — `pitr rewind --step N` restores the workspace to before that step in seconds."
+      "title": {
+        "en": "Explicit recovery points",
+        "zh": "明确恢复点"
       },
-      "chips": ["› 秒级倒回", "› 按步骤粒度", "› 不是整盘快照"]
+      "body": {
+        "en": "Each savepoint has a step and label.",
+        "zh": "每个保存点有步骤与标签。"
+      }
     },
     {
-      "title": { "zh": "字节级校验才放心", "en": "Byte-level verify you can trust" },
-      "body": {
-        "zh": "`pitr verify --step N` 仅在工作集 sha256 全匹配时退出 0——不是启发式猜测，是真正的哈希校验。",
-        "en": "`pitr verify --step N` exits 0 only when the working set sha256 matches — not a heuristic guess, a real hash check."
+      "title": {
+        "en": "Check the restored bytes",
+        "zh": "检查恢复字节"
       },
-      "chips": ["› sha256 全匹配", "› 退出码 0 = 一致", "› 非 guess"]
+      "body": {
+        "en": "verify compares hashes and file membership.",
+        "zh": "verify 比较哈希与文件集合。"
+      }
     },
     {
-      "title": { "zh": "够到 git 够不到的", "en": "Reaches where git can't" },
-      "body": {
-        "zh": "/etc、~/.config、sqlite、运行时态——git 跟踪不到的文件，pitrrwnd 按步骤做快照，按步骤回滚。",
-        "en": "/etc, ~/.config, sqlite, runtime state — files git can't track, pitrrwnd snapshots per step and rewinds per step."
+      "title": {
+        "en": "Keep local records",
+        "zh": "保留本地记录"
       },
-      "chips": ["› 非跟踪文件", "› 按步骤非整盘", "› 配置 + DB + 运行时"]
-    },
-    {
-      "title": { "zh": "全程不出境", "en": "Never leaves your machine" },
       "body": {
-        "zh": "气隙 box 上跑，不联网、不注册、不上云——redo 日志天然留等保可审计的还原痕。",
-        "en": "Runs on airgapped boxes — no network, no signup, no cloud — the redo log leaves a compliance-auditable restore trail."
-      },
-      "chips": ["› 气隙可用", "› 等保审计痕", "› 零外发"]
+        "en": "Savepoints and audit artifacts live with the workspace.",
+        "zh": "保存点与审计产物保存在工作区。"
+      }
     }
   ],
-  "scene": { "kind": "orbit", "nodes": ["workspace", "savepoint", "rewind", "verify", "audit"] },
-  "footer": { "tag": { "zh": "MIT 开源 · 信创气隙 box 优先", "en": "MIT open source · built for airgapped compliance boxes" } }
+  "demo": {
+    "title": {
+      "en": "Run it on a complete example",
+      "zh": "运行完整示例"
+    },
+    "note": {
+      "en": "Python 3 creates a complete temporary working set with two text files and runs the real recovery CLI.",
+      "zh": "Python 3 创建包含两个文本文件的完整临时工作区，并运行真实恢复 CLI。"
+    },
+    "source": "https://github.com/SuperMarioYL/pitrrwnd/blob/main/docs/demo-results.json",
+    "steps": [
+      {
+        "label": "Recorded run",
+        "body": "Savepoint, edit/delete/add, rewind and SHA256 verification in a temporary workspace; regular-file recovery using the local platform copy path.",
+        "command": "python3 examples/presentation_demo.py",
+        "output": "verify after edits: 1\nverify step 1: OK (working set sha256 matches manifest)\nconfig restored: True\ndeleted file restored: True\nadded file removed: True",
+        "image": "/assets/presentation/demo-0-light.svg",
+        "imageDark": "/assets/presentation/demo-0-dark.svg"
+      }
+    ]
+  },
+  "quickstart": {
+    "title": {
+      "en": "Try it locally",
+      "zh": "本地上手"
+    },
+    "body": {
+      "en": "Python 3 creates a complete temporary working set with two text files and runs the real recovery CLI.",
+      "zh": "Python 3 创建包含两个文本文件的完整临时工作区，并运行真实恢复 CLI。"
+    },
+    "steps": [
+      {
+        "title": {
+          "en": "Install from source",
+          "zh": "从源码安装"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/pitrrwnd.git\ncd pitrrwnd\ngo build -o bin/pitr ./cmd/pitr"
+      },
+      {
+        "title": {
+          "en": "Run the included example",
+          "zh": "运行随仓示例"
+        },
+        "code": "python3 examples/presentation_demo.py"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "en": "Recovery targets explicit savepoints. Arbitrary timestamp redo replay is not implemented.",
+      "zh": "恢复目标是明确保存点，尚未实现任意时间戳 redo 重放。"
+    },
+    {
+      "en": "Snapshot traversal is not an atomic database backup. Stop concurrent writers when consistency matters; symlinks and non-regular entries are excluded.",
+      "zh": "目录遍历快照不是原子数据库备份。需要一致性时应停止并发写入；符号链接与非普通条目不在范围内。"
+    },
+    {
+      "en": "Rewind overwrites and removes regular files under the selected root. The demo uses its own temporary directory. Local audit output is not a compliance certification.",
+      "zh": "Rewind 会覆盖和移除所选根目录下的普通文件；示例使用自身临时目录。本地审计输出不代表合规认证。"
+    }
+  ],
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/presentation/scene-dark.svg",
+    "fallbackLight": "/assets/presentation/scene-light.svg"
+  },
+  "story": {
+    "intro": {
+      "title": {
+        "en": "A concrete task",
+        "zh": "从实际任务出发"
+      },
+      "body": {
+        "en": "A workspace can contain useful config and runtime files outside version control. A savepoint records those files before an edit, so a failed change can be checked and reversed within that chosen directory.",
+        "zh": "工作区可能包含版本控制之外的重要配置与运行文件。编辑前的保存点记录这些文件，让失败改动可在所选目录内检查和恢复。"
+      }
+    },
+    "sections": [
+      {
+        "title": {
+          "en": "Follow the operation",
+          "zh": "处理过程"
+        },
+        "body": {
+          "en": "The bbolt store indexes savepoints under .pitr. Snapshotting clones or copies regular files and writes a SHA256 manifest. Restore copies the chosen snapshot back and removes extra regular files; verify compares the file set and hashes. The optional watcher records file events in redo.wal, while audit records operations.",
+          "zh": "bbolt 存储在 .pitr 下索引保存点；快照通过克隆或复制普通文件生成 SHA256 清单。Restore 把所选快照复制回来并移除额外普通文件，verify 比较文件集合与哈希。可选 watcher 将事件写入 redo.wal，audit 记录操作。"
+        },
+        "image": {
+          "light": "/assets/presentation/process-light.svg",
+          "dark": "/assets/presentation/process-dark.svg",
+          "alt": {
+            "en": "Follow the operation",
+            "zh": "处理过程"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Inside pitrrwnd",
+          "zh": "pitrrwnd 的内部流程"
+        },
+        "body": {
+          "en": "The bbolt store indexes savepoints under .pitr. Snapshotting clones or copies regular files and writes a SHA256 manifest. Restore copies the chosen snapshot back and removes extra regular files; verify compares the file set and hashes. The optional watcher records file events in redo.wal, while audit records operations.",
+          "zh": "bbolt 存储在 .pitr 下索引保存点；快照通过克隆或复制普通文件生成 SHA256 清单。Restore 把所选快照复制回来并移除额外普通文件，verify 比较文件集合与哈希。可选 watcher 将事件写入 redo.wal，audit 记录操作。"
+        },
+        "image": {
+          "light": "/assets/presentation/architecture-light.svg",
+          "dark": "/assets/presentation/architecture-dark.svg",
+          "alt": {
+            "en": "Inside pitrrwnd",
+            "zh": "pitrrwnd 的内部流程"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Connect the pieces",
+          "zh": "输入与输出"
+        },
+        "body": {
+          "en": "Choose the input and output route that matches your workflow. The local example below exercises the stated subset.",
+          "zh": "根据工作流选择输入与输出路径。本文本地示例验证其中明确说明的子流程。"
+        },
+        "image": {
+          "light": "/assets/presentation/integrations-light.svg",
+          "dark": "/assets/presentation/integrations-dark.svg",
+          "alt": {
+            "en": "Connect the pieces",
+            "zh": "输入与输出"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "en": "Configuration",
+          "zh": "配置"
+        },
+        "body": {
+          "en": "--root/-C chooses the workspace and defaults to the current directory. savepoint --label names a boundary; verify --step compares it; rewind --step applies it. .pitr contains state.db, snapshots, manifests, redo.wal and audit.jsonl. Linux attempts reflink and falls back to byte copy; non-Linux uses full copies. watch runs in the foreground and records events rather than creating savepoints automatically.",
+          "zh": "--root/-C 指定工作区，默认当前目录。savepoint --label 命名边界；verify --step 比较；rewind --step 应用。.pitr 保存 state.db、snapshots、manifests、redo.wal 与 audit.jsonl。Linux 尝试 reflink，失败后字节复制；非 Linux 使用完整复制。watch 前台运行，只记录事件，不自动创建保存点。"
+        }
+      },
+      {
+        "title": {
+          "en": "Further use",
+          "zh": "进一步使用"
+        },
+        "body": {
+          "en": "Run these commands from the repository root after installation. Replace paths for your own data.",
+          "zh": "安装后在仓库根目录运行以下命令；处理自己的数据时替换相应路径。"
+        },
+        "code": "# Use a dedicated workspace directory containing your files:\n./bin/pitr --root ./my-work init\n./bin/pitr --root ./my-work savepoint --label \"before edit\"\n./bin/pitr --root ./my-work verify --step 1\n./bin/pitr --root ./my-work log\n./bin/pitr --root ./my-work audit-export -o audit-bundle.tar.gz"
+      }
+    ]
+  }
 }

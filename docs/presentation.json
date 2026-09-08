@@ -1,0 +1,90 @@
+{
+  "name": "pitrrwnd",
+  "tagline": "Restore a workspace to an explicit savepoint.",
+  "architecture": {
+    "title": "Inside pitrrwnd",
+    "nodes": [
+      {
+        "title": "Workspace files",
+        "detail": "Chosen --root directory"
+      },
+      {
+        "title": "Snapshot + manifest",
+        "detail": "internal/snapshot"
+      },
+      {
+        "title": "Savepoint index",
+        "detail": "internal/store"
+      },
+      {
+        "title": "Restore + verify",
+        "detail": "snapshot restore / SHA256"
+      },
+      {
+        "title": "Audit + redo",
+        "detail": "internal/audit; internal/redo"
+      }
+    ],
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  },
+  "process": {
+    "title": "From input to a useful result",
+    "steps": [
+      {
+        "title": "Save two files",
+        "detail": "Snapshot and manifest"
+      },
+      {
+        "title": "Change the set",
+        "detail": "Edit, delete and add"
+      },
+      {
+        "title": "Restore + verify",
+        "detail": "Hashes and file set match"
+      }
+    ],
+    "result": "Verification rejects the changed workspace, then passes after restoring both original files and removing the added file."
+  },
+  "integrations": {
+    "title": "Supported input and output routes",
+    "items": [
+      {
+        "title": "Regular files",
+        "detail": "Directory-scoped snapshots"
+      },
+      {
+        "title": "Linux reflink / copy",
+        "detail": "Clone with copy fallback"
+      },
+      {
+        "title": "SHA256 manifest",
+        "detail": "Restore verification"
+      },
+      {
+        "title": "fsnotify redo log",
+        "detail": "Recorded file events"
+      },
+      {
+        "title": "tar.gz bundle",
+        "detail": "Local audit export"
+      }
+    ]
+  }
+}

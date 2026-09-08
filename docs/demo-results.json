@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "source_revision": "91a4f04d8904391d551eef88e9c69053655aad85",
+  "scope": "Savepoint, edit/delete/add, rewind and SHA256 verification in a temporary workspace; regular-file recovery using the local platform copy path.",
+  "steps": [
+    {
+      "label": "Recorded run",
+      "body": "Savepoint, edit/delete/add, rewind and SHA256 verification in a temporary workspace; regular-file recovery using the local platform copy path.",
+      "command": "python3 examples/presentation_demo.py",
+      "output": "verify after edits: 1\nverify step 1: OK (working set sha256 matches manifest)\nconfig restored: True\ndeleted file restored: True\nadded file removed: True"
+    }
+  ]
+}
