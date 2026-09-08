@@ -37,6 +37,11 @@ var errUnsupported = errors.New("reflink clone unsupported on this platform")
 
 // Take writes a COW snapshot + sha256 manifest for the working set at root and
 // records the savepoint in the index. Returns the savepoint summary.
+//
+// The manifest hashes the snapshot copies, not the working-set sources: the
+// agent may rewrite a file between the copy and the hash, and the manifest must
+// describe the exact bytes Restore() puts back so rewind -> verify is always
+// byte-level equal.
 func Take(root string, st *store.Store, label, actor string) (store.Savepoint, error) {
 	step, err := st.AllocStep()
 	if err != nil {
@@ -65,9 +70,12 @@ func Take(root string, st *store.Store, label, actor string) (store.Savepoint, e
 		if err := cloneOrCopy(src, dst); err != nil {
 			return store.Savepoint{}, fmt.Errorf("snapshot %s: %w", rel, err)
 		}
-		h, err := hashFile(src)
+		// Hash the snapshot copy, not src: src may be rewritten concurrently by
+		// the agent, and a manifest that disagrees with the snapshot bytes would
+		// break the rewind -> verify byte-equality guarantee.
+		h, err := hashFile(dst)
 		if err != nil {
-			return store.Savepoint{}, fmt.Errorf("hash %s: %w", rel, err)
+			return store.Savepoint{}, fmt.Errorf("hash snapshot %s: %w", rel, err)
 		}
 		manifest.Files[rel] = h
 	}

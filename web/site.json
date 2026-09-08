@@ -10,7 +10,8 @@
   },
   "meta": {
     "visual_style": "neon-particle",
-    "demo_source": "docs/demo-results.json"
+    "demo_source": "docs/demo-results.json",
+    "content_version": "v0.2.0"
   },
   "hero": {
     "headline": {
@@ -223,5 +224,11 @@
         "code": "# Use a dedicated workspace directory containing your files:\n./bin/pitr --root ./my-work init\n./bin/pitr --root ./my-work savepoint --label \"before edit\"\n./bin/pitr --root ./my-work verify --step 1\n./bin/pitr --root ./my-work log\n./bin/pitr --root ./my-work audit-export -o audit-bundle.tar.gz"
       }
     ]
+  },
+  "footer": {
+    "tag": {
+      "zh": "pitrrwnd 提供 pitr CLI，为包含普通文件的目录创建快照，恢复选定步骤，再按清单核验恢复字节 · v0.2.0",
+      "en": "pitrrwnd provides the pitr CLI for snapshotting a directory of regular files, restoring a selected step and verifying the restored bytes against its manifest · v0.2.0"
+    }
   }
 }

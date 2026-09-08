@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -60,10 +61,14 @@ func runSavepoint(_ *cobra.Command, _ []string) error {
 	e.Label = sp.Label
 	e.WorkingSetSha256 = sp.WorkingSetSha256
 	e.Result = "ok"
-	_ = audit.Append(st, e)
+	if err := audit.Append(st, e); err != nil {
+		return fmt.Errorf("savepoint step=%d written, but the audit ledger append failed: %w", sp.Step, err)
+	}
 
 	// Truncate the redo log at the savepoint boundary.
-	_ = redo.Truncate(st)
+	if err := redo.Truncate(st); err != nil {
+		return fmt.Errorf("savepoint step=%d recorded, but redo-log truncation failed: %w", sp.Step, err)
+	}
 
 	fmt.Printf("savepoint step=%d label=%q working_set_sha256=%s\n", sp.Step, sp.Label, sp.WorkingSetSha256)
 	return nil
@@ -84,7 +89,14 @@ func runVerify(_ *cobra.Command, _ []string) error {
 	} else {
 		e.Result = "ok"
 	}
-	_ = audit.Append(st, e)
+	aerr := audit.Append(st, e)
+	if aerr != nil && verr != nil {
+		// The verify failure stays the exit reason, but the broken ledger must
+		// not disappear silently.
+		fmt.Fprintf(os.Stderr, "audit ledger append also failed: %v\n", aerr)
+	} else if aerr != nil {
+		return fmt.Errorf("append audit ledger: %w", aerr)
+	}
 
 	if verr != nil {
 		fmt.Printf("verify step %d: FAIL — %v\n", verifyStep, verr)

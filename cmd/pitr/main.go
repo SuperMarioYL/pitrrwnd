@@ -15,7 +15,7 @@ import (
 )
 
 // version is overridden at release time via -ldflags "-X main.version=<tag>".
-var version = "0.1.0"
+var version = "0.2.0"
 
 // workspaceRoot is the agent working set; defaults to the current directory.
 var workspaceRoot string

@@ -6,6 +6,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-09
+
+### Fixed
+- Savepoint manifests now hash the snapshot bytes instead of re-reading the
+  working-set source after the copy. Previously a file rewritten while
+  `pitr savepoint` was running (exactly the foreground-watch workflow) could
+  produce a manifest that no longer described the snapshot, so
+  `pitr rewind --step N && pitr verify --step N` exited non-zero on a
+  byte-level restore. The manifest is now internally consistent with the
+  snapshot by construction.
+- `pitr savepoint`, `pitr rewind` and `pitr verify` no longer silently
+  swallow audit-ledger and redo-log truncation failures. A missing or
+  unwritable `.pitr/audit.jsonl` now exits non-zero instead of recording an
+  unaudited savepoint or restore — the rewind error states that the working
+  set was already restored and only the ledger append failed.
+
+### Changed
+- All version surfaces bumped to 0.2.0 in lockstep: `VERSION` file, CLI
+  `--version`, the on-disk `store.Version` reported in the audit-export
+  bundle manifest, and the site's content version / footer tag.
+
 ## [0.1.0] - 2026-08-02
 
 ### Added
@@ -29,5 +50,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bilingual README (zh-CN primary + English sibling), animated dark/light
   hero + architecture SVGs, vhs-rendered demo gif, and goreleaser release CI.
 
-[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/SuperMarioYL/pitrrwnd/releases/tag/v0.1.0

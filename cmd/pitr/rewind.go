@@ -46,8 +46,12 @@ func runRewind(_ *cobra.Command, _ []string) error {
 	e.Label = sp.Label
 	e.WorkingSetSha256 = sp.WorkingSetSha256
 	e.Result = "ok"
-	_ = audit.Append(st, e)
-	_ = redo.Truncate(st)
+	if err := audit.Append(st, e); err != nil {
+		return fmt.Errorf("working set restored to step %d, but the audit ledger append failed: %w", sp.Step, err)
+	}
+	if err := redo.Truncate(st); err != nil {
+		return fmt.Errorf("working set restored to step %d, but redo-log truncation failed: %w", sp.Step, err)
+	}
 
 	fmt.Printf("rewound to step %d (%q); working_set_sha256=%s\n", sp.Step, sp.Label, sp.WorkingSetSha256)
 	fmt.Println("run `pitr verify --step <N>` to confirm byte-level equality.")

@@ -100,6 +100,44 @@ func TestLoadManifestMissing(t *testing.T) {
 	}
 }
 
+// TestTakeManifestMatchesSnapshotBytes locks the invariant the v0.1.0 TOCTOU
+// broke: every manifest hash must describe the bytes actually stored in the
+// snapshot, not a racy re-read of the working-set source. Restore() copies the
+// snapshot files back, so only this invariant guarantees rewind -> verify is
+// byte-level equal even when a file changed while the savepoint was taken.
+func TestTakeManifestMatchesSnapshotBytes(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Init(dir, "tester")
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer st.Close()
+
+	writeFile(t, dir, "app/conf.yaml", "port: 8080\n")
+	writeFile(t, dir, "data/state.txt", "hello\n")
+
+	sp, err := Take(dir, st, "consistency", "tester")
+	if err != nil {
+		t.Fatalf("Take: %v", err)
+	}
+	m, err := LoadManifest(st, sp.Step)
+	if err != nil {
+		t.Fatalf("LoadManifest: %v", err)
+	}
+	if len(m.Files) != 2 {
+		t.Fatalf("manifest files = %d, want 2", len(m.Files))
+	}
+	for rel, want := range m.Files {
+		got, err := hashFile(filepath.Join(st.SnapshotDir(sp.Step), rel))
+		if err != nil {
+			t.Fatalf("hash snapshot %s: %v", rel, err)
+		}
+		if got != want {
+			t.Fatalf("manifest hash for %s does not describe the snapshot bytes (manifest %s, snapshot %s)", rel, want, got)
+		}
+	}
+}
+
 func TestWalkFilesSkipsPitr(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "a.txt", "a")
