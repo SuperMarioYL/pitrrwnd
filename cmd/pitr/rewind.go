@@ -49,7 +49,7 @@ func runRewind(_ *cobra.Command, _ []string) error {
 	if err := audit.Append(st, e); err != nil {
 		return fmt.Errorf("working set restored to step %d, but the audit ledger append failed: %w", sp.Step, err)
 	}
-	if err := redo.Truncate(st); err != nil {
+	if err := redo.Truncate(st.RedoLogPath()); err != nil {
 		return fmt.Errorf("working set restored to step %d, but redo-log truncation failed: %w", sp.Step, err)
 	}
 

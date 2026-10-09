@@ -66,7 +66,7 @@ func runSavepoint(_ *cobra.Command, _ []string) error {
 	}
 
 	// Truncate the redo log at the savepoint boundary.
-	if err := redo.Truncate(st); err != nil {
+	if err := redo.Truncate(st.RedoLogPath()); err != nil {
 		return fmt.Errorf("savepoint step=%d recorded, but redo-log truncation failed: %w", sp.Step, err)
 	}
 

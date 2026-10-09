@@ -19,10 +19,14 @@ import (
 	"github.com/SuperMarioYL/pitrrwnd/internal/store"
 )
 
-// Watch runs the foreground watcher over root. It blocks until ctx is
-// cancelled or the watcher fails. New directories created during the session
-// are added to the watch tree so nested agent edits are captured too.
-func Watch(ctx context.Context, root string, st *store.Store, onEvent func(redo.Entry)) error {
+// Watch runs the foreground watcher over root, appending a redo-log entry per
+// file event to the log at redoPath (store.Store owns the layout; the watcher
+// deliberately takes the path, not the store, so the bbolt state.db handle —
+// and its exclusive lock — can be released while the watcher blocks). It
+// returns when ctx is cancelled or the watcher fails. New directories created
+// during the session are added to the watch tree so nested agent edits are
+// captured too.
+func Watch(ctx context.Context, root string, redoPath string, onEvent func(redo.Entry)) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("create watcher: %w", err)
@@ -46,7 +50,7 @@ func Watch(ctx context.Context, root string, st *store.Store, onEvent func(redo.
 			if !ok {
 				return nil
 			}
-			if e := handle(st, root, w, ev); e.Path != "" && onEvent != nil {
+			if e := handle(redoPath, root, w, ev); e.Path != "" && onEvent != nil {
 				onEvent(e)
 			}
 		}
@@ -55,7 +59,7 @@ func Watch(ctx context.Context, root string, st *store.Store, onEvent func(redo.
 
 // handle processes a single fsnotify event and returns the redo entry it
 // appended (zero value Entry if the event was skipped, e.g. inside .pitr).
-func handle(st *store.Store, root string, w *fsnotify.Watcher, ev fsnotify.Event) redo.Entry {
+func handle(redoPath string, root string, w *fsnotify.Watcher, ev fsnotify.Event) redo.Entry {
 	rel, err := filepath.Rel(root, ev.Name)
 	if err != nil {
 		return redo.Entry{}
@@ -88,7 +92,7 @@ func handle(st *store.Store, root string, w *fsnotify.Watcher, ev fsnotify.Event
 		}
 	}
 	e := redo.NewEntry(op, filepath.ToSlash(rel), sha, size)
-	_ = redo.Append(st, e)
+	_ = redo.Append(redoPath, e)
 	return e
 }
 

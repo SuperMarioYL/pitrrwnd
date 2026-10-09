@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-10
+
+### Fixed
+- `pitr watch` no longer locks out every concurrent command. The watcher
+  session held the exclusive bbolt lock on `.pitr/state.db` for its entire
+  lifetime, so running `pitr savepoint`, `pitr rewind`, `pitr verify`, `pitr
+  log` or `pitr audit-export` in another terminal failed after ~3s with
+  `open state db: timeout` — exactly the documented workflow (watch in the
+  foreground while stateless commands run alongside). The watcher now takes
+  only the redo-log path; the state DB handle is released before it blocks.
+
+### Added
+- `pitr log` now shows a "Redo log (since last savepoint)" section listing the
+  pending per-write events recorded by the watcher. The redo log was
+  previously only visible inside the `audit-export` bundle as raw JSONL. A
+  torn or unreadable redo log (possible now that the watcher appends while a
+  concurrent savepoint truncates) is reported as a warning instead of failing
+  the command; the audit ledger keeps its strict integrity contract.
+
+### Changed
+- All version surfaces bumped to 0.3.0 in lockstep: `VERSION` file, CLI
+  `--version`, the on-disk `store.Version` reported in the audit-export bundle
+  manifest, and the site's content version / footer tag. A new lockstep test
+  pins the CLI default, the VERSION file and `store.Version` together so they
+  cannot drift again.
+
 ## [0.2.0] - 2026-09-09
 
 ### Fixed
@@ -50,6 +76,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bilingual README (zh-CN primary + English sibling), animated dark/light
   hero + architecture SVGs, vhs-rendered demo gif, and goreleaser release CI.
 
-[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/SuperMarioYL/pitrrwnd/releases/tag/v0.1.0

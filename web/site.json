@@ -11,7 +11,7 @@
   "meta": {
     "visual_style": "neon-particle",
     "demo_source": "docs/demo-results.json",
-    "content_version": "v0.2.0"
+    "content_version": "v0.3.0"
   },
   "hero": {
     "headline": {
@@ -227,8 +227,8 @@
   },
   "footer": {
     "tag": {
-      "zh": "pitrrwnd 提供 pitr CLI，为包含普通文件的目录创建快照，恢复选定步骤，再按清单核验恢复字节 · v0.2.0",
-      "en": "pitrrwnd provides the pitr CLI for snapshotting a directory of regular files, restoring a selected step and verifying the restored bytes against its manifest · v0.2.0"
+      "zh": "pitrrwnd 提供 pitr CLI，为包含普通文件的目录创建快照，恢复选定步骤，再按清单核验恢复字节 · v0.3.0",
+      "en": "pitrrwnd provides the pitr CLI for snapshotting a directory of regular files, restoring a selected step and verifying the restored bytes against its manifest · v0.3.0"
     }
   }
 }

@@ -15,8 +15,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/SuperMarioYL/pitrrwnd/internal/store"
 )
 
 // Op is the kind of filesystem event recorded.
@@ -43,12 +41,16 @@ func NewEntry(op Op, rel string, sha string, size int64) Entry {
 	return Entry{Op: op, Path: rel, Sha256: sha, Size: size, IsoTs: time.Now().UTC().Format(time.RFC3339Nano)}
 }
 
-// Append writes one JSON line to the redo log.
-func Append(st *store.Store, e Entry) error {
+// Append writes one JSON line to the redo log at path. The redo package owns
+// the entry format; the caller gets the path from store.Store, which owns the
+// on-disk layout. Taking a path (not a *store.Store) lets the foreground
+// watcher append without holding the bbolt state.db handle open — the DB is
+// exclusive, and holding it would lock out concurrent savepoint/rewind/verify.
+func Append(path string, e Entry) error {
 	if e.IsoTs == "" {
 		e.IsoTs = time.Now().UTC().Format(time.RFC3339Nano)
 	}
-	f, err := os.OpenFile(st.RedoLogPath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("open redo log: %w", err)
 	}
@@ -64,9 +66,9 @@ func Append(st *store.Store, e Entry) error {
 	return nil
 }
 
-// Read returns every redo entry in append order.
-func Read(st *store.Store) ([]Entry, error) {
-	f, err := os.Open(st.RedoLogPath())
+// Read returns every redo entry in append order from the log at path.
+func Read(path string) ([]Entry, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open redo log: %w", err)
 	}
@@ -88,10 +90,10 @@ func Read(st *store.Store) ([]Entry, error) {
 	return out, sc.Err()
 }
 
-// Truncate empties the redo log. Called after a savepoint so the log only
-// holds writes that happened since the last savepoint boundary.
-func Truncate(st *store.Store) error {
-	if err := os.Truncate(st.RedoLogPath(), 0); err != nil {
+// Truncate empties the redo log at path. Called after a savepoint so the log
+// only holds writes that happened since the last savepoint boundary.
+func Truncate(path string) error {
+	if err := os.Truncate(path, 0); err != nil {
 		return fmt.Errorf("truncate redo log: %w", err)
 	}
 	return nil

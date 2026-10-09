@@ -66,24 +66,25 @@ func runWatch(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
-
+	// The watcher only appends to the redo log; the bbolt handle it would
+	// otherwise hold for the whole session takes the exclusive state.db lock
+	// and locks out every concurrent savepoint/rewind/verify/log. Validate
+	// init, take what the watcher needs, and release the DB before blocking.
+	redoPath := st.RedoLogPath()
 	root, err := absRoot()
 	if err != nil {
+		_ = st.Close()
 		return err
 	}
+	if err := st.Close(); err != nil {
+		return err
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	fmt.Fprintf(os.Stderr, "watching %s for file events (Ctrl-C to stop)\n", root)
-	return watcher.Watch(ctx, root, st, func(e redo.Entry) {
-		sha := e.Sha256
-		if len(sha) > 8 {
-			sha = sha[:8]
-		}
-		if sha == "" {
-			sha = "-"
-		}
-		fmt.Printf("%-7s %-8s %10dB  %s\n", string(e.Op), sha, e.Size, e.Path)
+	return watcher.Watch(ctx, root, redoPath, func(e redo.Entry) {
+		fmt.Printf("%-7s %-8s %10dB  %s\n", string(e.Op), formatSha8(e.Sha256), e.Size, e.Path)
 	})
 }

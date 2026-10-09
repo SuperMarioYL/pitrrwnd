@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/SuperMarioYL/pitrrwnd/internal/audit"
+	"github.com/SuperMarioYL/pitrrwnd/internal/redo"
 	"github.com/SuperMarioYL/pitrrwnd/internal/store"
 )
 
@@ -70,7 +71,42 @@ func runLog(_ *cobra.Command, _ []string) error {
 	for _, e := range entries {
 		fmt.Printf("  %s  %-9s %s\n", e.IsoTs, string(e.Op), formatAudit(e))
 	}
+
+	printRedoSection(st.RedoLogPath())
 	return nil
+}
+
+// printRedoSection lists the pending redo-log entries (per-write events since
+// the last savepoint). The redo log is a best-effort event stream — the
+// foreground watcher discards per-event append errors, and a concurrent
+// savepoint truncation can tear the tail — so an unreadable or malformed log
+// is reported as a warning here rather than failing the whole `pitr log`. The
+// audit ledger above keeps its strict integrity contract.
+func printRedoSection(redoPath string) {
+	fmt.Println("\n== Redo log (since last savepoint) ==")
+	redoEntries, err := redo.Read(redoPath)
+	if err != nil {
+		fmt.Printf("  (redo log unreadable at %s: %v)\n", redoPath, err)
+		return
+	}
+	if len(redoEntries) == 0 {
+		fmt.Println("  (no pending writes — run `pitr watch` while the agent works)")
+		return
+	}
+	for _, e := range redoEntries {
+		fmt.Printf("  %s  %-7s %-8s %10dB  %s\n", e.IsoTs, string(e.Op), formatSha8(e.Sha256), e.Size, e.Path)
+	}
+}
+
+// formatSha8 shortens a hash for display, matching the watcher's output.
+func formatSha8(sha string) string {
+	if len(sha) > 8 {
+		return sha[:8]
+	}
+	if sha == "" {
+		return "-"
+	}
+	return sha
 }
 
 func formatSavepoint(sp store.Savepoint) string {
@@ -109,14 +145,14 @@ func formatAudit(e audit.Entry) string {
 
 // bundleManifest is the JSON manifest placed at the root of the audit bundle.
 type bundleManifest struct {
-	Tool            string    `json:"tool"`
-	Version         string    `json:"version"`
-	WorkspaceRoot   string    `json:"workspace_root"`
-	WorkspaceCreatedAt string `json:"workspace_created_at"`
-	Hostname        string    `json:"hostname"`
-	GeneratedAt     time.Time `json:"generated_at"`
-	AuditSha256     string    `json:"audit_sha256"`
-	SavepointCount  int       `json:"savepoint_count"`
+	Tool               string    `json:"tool"`
+	Version            string    `json:"version"`
+	WorkspaceRoot      string    `json:"workspace_root"`
+	WorkspaceCreatedAt string    `json:"workspace_created_at"`
+	Hostname           string    `json:"hostname"`
+	GeneratedAt        time.Time `json:"generated_at"`
+	AuditSha256        string    `json:"audit_sha256"`
+	SavepointCount     int       `json:"savepoint_count"`
 }
 
 func runAuditExport(_ *cobra.Command, _ []string) error {
