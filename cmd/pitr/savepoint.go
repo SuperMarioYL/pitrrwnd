@@ -85,7 +85,9 @@ func runVerify(_ *cobra.Command, _ []string) error {
 	e := audit.NewEntry(audit.OpVerify)
 	e.Step = verifyStep
 	if verr != nil {
-		e.Result = "fail"
+		// The ledger is the compliance record: keep the divergence that
+		// explains the failure instead of a bare "fail".
+		e.Result = "fail: " + verr.Error()
 	} else {
 		e.Result = "ok"
 	}

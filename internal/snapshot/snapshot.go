@@ -134,12 +134,26 @@ func Verify(root string, st *store.Store, step int) error {
 // Restore rewinds the working set to step by copying snapshot files back and
 // removing any working-set file not present at the savepoint. Returns the
 // savepoint summary (for the audit ledger).
+//
+// Restore is destructive, so it proves the snapshot can put every manifest file
+// back before it deletes or overwrites anything. Checking after the fact would
+// be too late: a missing or corrupt snapshot file would leave the working set
+// half-rewound, with files deleted that exist nowhere else.
 func Restore(root string, st *store.Store, step int) (store.Savepoint, error) {
 	manifest, err := LoadManifest(st, step)
 	if err != nil {
 		return store.Savepoint{}, err
 	}
 	snapDir := st.SnapshotDir(step)
+	for rel, want := range manifest.Files {
+		got, err := hashFile(filepath.Join(snapDir, rel))
+		if err != nil {
+			return store.Savepoint{}, fmt.Errorf("snapshot for step %d is unusable (%s: %w); working set left untouched", step, rel, err)
+		}
+		if got != want {
+			return store.Savepoint{}, fmt.Errorf("snapshot for step %d is corrupt (%s sha256 %s, manifest %s); working set left untouched", step, rel, got, want)
+		}
+	}
 	for rel := range manifest.Files {
 		src := filepath.Join(snapDir, rel)
 		dst := filepath.Join(root, rel)
@@ -276,11 +290,26 @@ func workingSetDigest(files map[string]string) string {
 }
 
 // walkFiles returns the relative paths of all regular files under root,
-// skipping the .pitr/ state directory and non-regular entries (symlinks,
-// devices). Paths use forward slashes for cross-platform manifest stability.
+// skipping this workspace's own .pitr/ state directory and non-regular entries
+// (symlinks, devices). Paths use forward slashes for cross-platform manifest
+// stability.
+//
+// Only root/.pitr is state: a nested directory that happens to be named .pitr
+// is ordinary working-set content (internal/store.IsStatePath). The root itself
+// must be a directory. filepath.Walk does not follow a symlinked root and would
+// report an empty working set, so the caller is expected to pass a resolved
+// root (cmd/pitr resolves --root); a non-directory root fails closed rather than
+// snapshotting nothing.
 func walkFiles(root string) ([]string, error) {
+	fi, err := os.Stat(root)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("working set root %s is not a directory", root)
+	}
 	var out []string
-	err := filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+	err = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return nil
@@ -288,10 +317,7 @@ func walkFiles(root string) ([]string, error) {
 			return err
 		}
 		if info.IsDir() {
-			if p == root {
-				return nil
-			}
-			if filepath.Base(p) == store.PitrDirName {
+			if store.IsStatePath(root, p) {
 				return filepath.SkipDir
 			}
 			return nil

@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
 
 // Version is the on-disk state format version, persisted on init.
-const Version = "0.3.0"
+const Version = "0.4.0"
 
 const (
 	// PitrDirName is the name of the state directory inside a workspace root.
@@ -185,6 +186,16 @@ func (s *Store) RedoLogPath() string { return filepath.Join(s.PitrDir, redoLogFi
 
 // AuditPath returns the audit-ledger file path.
 func (s *Store) AuditPath() string { return filepath.Join(s.PitrDir, auditFileName) }
+
+// IsStatePath reports whether p is this workspace's own .pitr state directory
+// (root/.pitr) or lies inside it. Only that directory is pitrrwnd state: a
+// nested directory that merely happens to be named .pitr is ordinary
+// working-set content, so snapshotting and the redo log must not hide it.
+func IsStatePath(root, p string) bool {
+	stateDir := filepath.Join(root, PitrDirName)
+	p = filepath.Clean(p)
+	return p == stateDir || strings.HasPrefix(p, stateDir+string(filepath.Separator))
+}
 
 // AllocStep atomically reserves and returns the next savepoint step number.
 func (s *Store) AllocStep() (int, error) {

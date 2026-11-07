@@ -158,6 +158,33 @@ func TestWatchSkipsPitrEvents(t *testing.T) {
 	}
 }
 
+// TestWatchRecordsNestedPitrEvent pins v0.4.0's state-directory rule at the
+// handle level: only root/.pitr is state, so an event in a nested directory
+// that happens to be named .pitr is working-set content and must be recorded.
+func TestWatchRecordsNestedPitrEvent(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Init(dir, "tester")
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer st.Close()
+
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatalf("NewWatcher: %v", err)
+	}
+	defer w.Close()
+
+	wantRel := filepath.Join("sub", store.PitrDirName, "config.txt")
+	e := handle(st.RedoLogPath(), dir, w, fsnotify.Event{
+		Name: filepath.Join(dir, wantRel),
+		Op:   fsnotify.Write,
+	})
+	if e.Path != filepath.ToSlash(wantRel) {
+		t.Fatalf("nested .pitr event must be recorded, got %+v", e)
+	}
+}
+
 func waitFor(t *testing.T, d time.Duration) {
 	t.Helper()
 	time.Sleep(d)

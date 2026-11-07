@@ -6,6 +6,38 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-08
+
+### Fixed
+- `pitr savepoint` on a `--root` reached through a symlink no longer "succeeds"
+  with an empty working set. The root was walked without being followed, so a
+  linked workspace directory produced a manifest with zero files
+  (`working_set_sha256` was the hash of the empty string) and `pitr verify`
+  agreed; the watcher was equally silent on the same root. `--root` is now
+  resolved to its real directory once, so every command and the watcher agree on
+  one working-set identity, and a non-directory root fails instead of
+  snapshotting nothing.
+- A nested directory named `.pitr` is no longer mistaken for the workspace's
+  state directory. Only `<root>/.pitr` is state; previously any directory with
+  that name was hidden from `pitr savepoint`, left unrestorable by
+  `pitr rewind`, and ignored by `pitr verify` — which could report OK for a
+  working set that had lost a file it had snapshotted.
+- `pitr rewind` validates the snapshot against the manifest before deleting or
+  overwriting any working-set file. A missing or corrupt snapshot file now fails
+  with the working set untouched instead of leaving it half-rewound, and the
+  documented rewind-then-verify byte-equality guarantee is checked rather than
+  assumed.
+- A failed `pitr verify` records why it failed in the audit ledger
+  (`"result": "fail: <reason>"`) instead of a bare `"fail"`, so the local
+  compliance record keeps the divergence the CLI prints.
+
+### Changed
+- All version surfaces bumped to 0.4.0 in lockstep: `VERSION` file, CLI
+  `--version`, the on-disk `store.Version` reported in the audit-export bundle
+  manifest, the CHANGELOG release heading, and the site's content version /
+  footer tag. The lockstep test now pins the CHANGELOG head and both site
+  surfaces in addition to the Go version surfaces.
+
 ## [0.3.0] - 2026-10-10
 
 ### Fixed
@@ -76,7 +108,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bilingual README (zh-CN primary + English sibling), animated dark/light
   hero + architecture SVGs, vhs-rendered demo gif, and goreleaser release CI.
 
-[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/SuperMarioYL/pitrrwnd/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/SuperMarioYL/pitrrwnd/releases/tag/v0.1.0

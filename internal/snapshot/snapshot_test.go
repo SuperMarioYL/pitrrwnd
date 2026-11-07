@@ -158,3 +158,53 @@ func TestWalkFilesSkipsPitr(t *testing.T) {
 		}
 	}
 }
+
+// TestNestedPitrDirIsWorkingSetContent pins v0.4.0's state-directory rule: only
+// root/.pitr is state. A nested directory that happens to be named .pitr is
+// ordinary working-set content, so it must be snapshotted, restorable and
+// verified — previously it was silently skipped and verify could report OK for a
+// working set that had lost a file it had snapshotted.
+func TestNestedPitrDirIsWorkingSetContent(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Init(dir, "tester")
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer st.Close()
+
+	writeFile(t, dir, "sub/.pitr/config.txt", "important\n")
+	writeFile(t, dir, "sub/normal.txt", "nested\n")
+
+	sp, err := Take(dir, st, "nested", "tester")
+	if err != nil {
+		t.Fatalf("Take: %v", err)
+	}
+	m, err := LoadManifest(st, sp.Step)
+	if err != nil {
+		t.Fatalf("LoadManifest: %v", err)
+	}
+	if _, ok := m.Files["sub/.pitr/config.txt"]; !ok {
+		t.Fatalf("nested .pitr content is missing from the manifest: %v", m.Files)
+	}
+
+	// The agent deletes it: verify must notice, then rewind must restore it.
+	if err := os.Remove(filepath.Join(dir, "sub", ".pitr", "config.txt")); err != nil {
+		t.Fatalf("remove nested config: %v", err)
+	}
+	if err := Verify(dir, st, sp.Step); err == nil {
+		t.Fatalf("Verify must fail when a snapshotted nested .pitr file is gone")
+	}
+	if _, err := Restore(dir, st, sp.Step); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "sub", ".pitr", "config.txt")); err != nil || string(b) != "important\n" {
+		t.Fatalf("nested .pitr file not restored: %q err=%v", b, err)
+	}
+	if err := Verify(dir, st, sp.Step); err != nil {
+		t.Fatalf("Verify after restoring the nested file: %v", err)
+	}
+	// The workspace's own state directory stays out of the manifest.
+	if _, ok := m.Files[".pitr/state.db"]; ok {
+		t.Fatalf("root state directory leaked into the manifest: %v", m.Files)
+	}
+}

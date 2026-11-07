@@ -5,6 +5,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -15,7 +17,7 @@ import (
 )
 
 // version is overridden at release time via -ldflags "-X main.version=<tag>".
-var version = "0.3.0"
+var version = "0.4.0"
 
 // workspaceRoot is the agent working set; defaults to the current directory.
 var workspaceRoot string
@@ -41,6 +43,9 @@ All state is local to .pitr/; nothing leaves the box.
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&workspaceRoot, "root", "C", ".",
 		"workspace root (default: current directory)")
+	rootCmd.PersistentPreRunE = func(*cobra.Command, []string) error {
+		return resolveWorkspaceRoot()
+	}
 }
 
 func main() {
@@ -71,4 +76,27 @@ func openStore() (*store.Store, error) {
 // absRoot returns the absolute workspace root.
 func absRoot() (string, error) {
 	return filepath.Abs(workspaceRoot)
+}
+
+// resolveWorkspaceRoot normalizes --root to one absolute, symlink-resolved
+// working-set identity. Every command needs it: filepath.Walk does not descend
+// a symlinked root and would report an empty working set (a savepoint would
+// "succeed" with nothing in it), while fsnotify reports real paths that only
+// match a resolved root. A root that does not exist yet keeps its absolute form
+// so `pitr init` can create it.
+func resolveWorkspaceRoot() error {
+	abs, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return fmt.Errorf("resolve root: %w", err)
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			workspaceRoot = abs
+			return nil
+		}
+		return fmt.Errorf("resolve root %s: %w", abs, err)
+	}
+	workspaceRoot = resolved
+	return nil
 }

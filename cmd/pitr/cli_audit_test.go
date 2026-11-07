@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SuperMarioYL/pitrrwnd/internal/audit"
 	"github.com/SuperMarioYL/pitrrwnd/internal/store"
 )
 
@@ -135,5 +136,47 @@ func TestCLICycleHappyPath(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "agent-junk.txt")); !os.IsNotExist(err) {
 		t.Fatalf("agent junk should be gone after rewind")
+	}
+}
+
+// TestCLIVerifyAuditRecordsReason pins v0.4.0's audit fix: the ledger is the
+// compliance record, so a failed verify keeps the divergence the CLI prints
+// instead of a bare "fail".
+func TestCLIVerifyAuditRecordsReason(t *testing.T) {
+	dir := initWorkspace(t)
+	savepointLabel = "before"
+	if err := runSavepoint(nil, nil); err != nil {
+		t.Fatalf("savepoint: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app.conf"), []byte("BROKEN\n"), 0o644); err != nil {
+		t.Fatalf("break conf: %v", err)
+	}
+
+	verifyStep = 1
+	if err := runVerify(nil, nil); err == nil {
+		t.Fatalf("verify should fail on the broken working set")
+	}
+
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer st.Close()
+	entries, err := audit.Read(st)
+	if err != nil {
+		t.Fatalf("read audit ledger: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatalf("audit ledger is empty")
+	}
+	last := entries[len(entries)-1]
+	if last.Op != audit.OpVerify {
+		t.Fatalf("last ledger entry op = %q, want %q", last.Op, audit.OpVerify)
+	}
+	if !strings.HasPrefix(last.Result, "fail: ") {
+		t.Fatalf("failed verify result should start with %q, got %q", "fail: ", last.Result)
+	}
+	if !strings.Contains(last.Result, "sha256 mismatch") {
+		t.Fatalf("failed verify result should name the divergence, got %q", last.Result)
 	}
 }

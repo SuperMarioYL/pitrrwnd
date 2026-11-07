@@ -40,7 +40,7 @@ type Entry struct {
 	IsoTs            string `json:"iso_ts"`
 	Hostname         string `json:"hostname"`
 	User             string `json:"user"`
-	Result           string `json:"result,omitempty"` // "ok" or "fail:<reason>"
+	Result           string `json:"result,omitempty"` // "ok" or "fail: <reason>"
 }
 
 // NewEntry returns an Entry with op, timestamp, hostname, and user filled in.

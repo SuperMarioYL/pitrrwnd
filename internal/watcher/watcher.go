@@ -64,8 +64,9 @@ func handle(redoPath string, root string, w *fsnotify.Watcher, ev fsnotify.Event
 	if err != nil {
 		return redo.Entry{}
 	}
-	// Never observe the state directory itself.
-	if rel == store.PitrDirName || filepath.HasPrefix(rel, store.PitrDirName+string(filepath.Separator)) {
+	// Never observe this workspace's own state directory. A nested directory
+	// named .pitr is working-set content and is recorded like any other file.
+	if store.IsStatePath(root, ev.Name) {
 		return redo.Entry{}
 	}
 	// New directory: fold it into the watch tree.
@@ -96,7 +97,8 @@ func handle(redoPath string, root string, w *fsnotify.Watcher, ev fsnotify.Event
 	return e
 }
 
-// addRecursive adds every directory under root to the watcher, skipping .pitr.
+// addRecursive adds every directory under root to the watcher, skipping this
+// workspace's own .pitr state directory (nested .pitr directories are watched).
 func addRecursive(w *fsnotify.Watcher, root string) error {
 	return filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -108,7 +110,7 @@ func addRecursive(w *fsnotify.Watcher, root string) error {
 		if !info.IsDir() {
 			return nil
 		}
-		if p != root && filepath.Base(p) == store.PitrDirName {
+		if store.IsStatePath(root, p) {
 			return filepath.SkipDir
 		}
 		return w.Add(p)
